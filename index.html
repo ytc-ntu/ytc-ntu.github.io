@@ -10,6 +10,10 @@
       name="description"
       content="CLB Truyền thông YTC - NTU. Tuổi trẻ Tài năng - Truyền thông Kết nối"
     />
+    <meta
+      property="og:image"
+      content="https://scontent.fdad1-1.fna.fbcdn.net/v/t1.6435-9/70930553_678896475854407_156063495035551744_n.png?_nc_cat=106&ccb=1-3&_nc_sid=e3f864&_nc_ohc=V1VlXMg8ZjUAX-3-V1B&_nc_ht=scontent.fdad1-1.fna&oh=72fbe00a7ca8f0d48b781af2c8c6c00a&oe=60AE7509"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!--====== Favicon Icon ======-->
@@ -552,7 +556,7 @@
           <div class="col-lg-6">
             <div class="section-title text-center">
               <p class="sub-title">Một vài hình ảnh</p>
-              <h2 class="title">Hoạt động của YTC - NTU</h2>
+              <h2 class="title">Hoạt động của Câu lạc bộ</h2>
             </div>
           </div>
         </div>
@@ -891,27 +895,30 @@
 
     <!-- Messenger Plugin chat Code -->
     <div id="fb-root"></div>
-      <script>
-        window.fbAsyncInit = function() {
-          FB.init({
-            xfbml            : true,
-            version          : 'v10.0'
-          });
-        };
+    <script>
+      window.fbAsyncInit = function () {
+        FB.init({
+          xfbml: true,
+          version: "v10.0",
+        });
+      };
 
-        (function(d, s, id) {
-          var js, fjs = d.getElementsByTagName(s)[0];
-          if (d.getElementById(id)) return;
-          js = d.createElement(s); js.id = id;
-          js.src = 'https://connect.facebook.net/vi_VN/sdk/xfbml.customerchat.js';
-          fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
-      </script>
+      (function (d, s, id) {
+        var js,
+          fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "https://connect.facebook.net/vi_VN/sdk/xfbml.customerchat.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      })(document, "script", "facebook-jssdk");
+    </script>
 
-      <!-- Your Plugin chat code -->
-      <div class="fb-customerchat"
-        attribution="page_inbox"
-        page_id="351631078580950">
-      </div>
+    <!-- Your Plugin chat code -->
+    <div
+      class="fb-customerchat"
+      attribution="page_inbox"
+      page_id="351631078580950"
+    ></div>
   </body>
 </html>
