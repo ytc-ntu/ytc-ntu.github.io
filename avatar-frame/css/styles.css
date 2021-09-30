@@ -1,0 +1,82 @@
+
+body {
+    background: #eeeeee;
+    font-size: 16px;
+    font-family: 'Lobster', cursive;
+}
+
+
+.main-content {
+    background: #ffffff;
+    margin-top: 25px;
+}
+
+.main-content .left-block, .main-content .right-block {
+    padding: 18px;
+}
+
+.dyn-box {
+    width: 100%;
+    position: relative;
+}
+
+.dyn-box:before {
+    content: "";
+    display: block;
+    padding-top: 100%;
+}
+
+.crop-image {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border: 1px solid #000000;
+    overflow: hidden;
+}
+
+.crop-image .cropper-move {
+    z-index: 2;
+}
+
+.frame-image {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-image: none;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: contain;
+    z-index: 1;
+}
+
+.btn {
+    margin-bottom: 5px;
+}
+
+.btn-upload, .btn-reset, .btn-download {
+    width:100%;
+}
+
+.btn-rotate-left, .btn-rotate-right, .btn-zoom-in, .btn-zoom-out, .btn-flip-horizon, .btn-flip-vertical {
+    width: 49%;
+}
+h2{
+    text-align: center;
+}
+
+h4 {
+    color: blue;
+}
+
+.footer {
+    padding-top: 14px;
+}
+
+.footer p {
+    font-size: 12px;
+    text-align: center;
+}
