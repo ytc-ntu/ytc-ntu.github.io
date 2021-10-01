@@ -1,25 +1,50 @@
 $(document).ready(function () {
 
+    function rand_string(length) {
+        var result           = '';
+        var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        var charactersLength = characters.length;
+        for ( var i = 0; i < length; i++ ) {
+          result += characters.charAt(Math.floor(Math.random() * charactersLength));
+       }
+       return result;
+      }
+	
     var preview = $('.preview-image');
     var scaleX = 0.5;
     var scaleY = 0.5;
     var output_size = 1024; // px
-    var output_name = 'avatar.png';
+    var output_name = rand_string(5)+'YTC-avatar.png';
+    
+        var text = { 'frames' : [
+		{'name':'YTC Chào Đón K63', 'src' :'uploads/frame-ytc.png'}, 
+		{'name':'Mùa Hè Xanh NTU','src' :'uploads/frame0.png'}, 
+	    ]};
 
-    $.post( "ajax.php", function( data ) {
-        if( ! data ) {
-            alert('Lấy dữ liệu thất bại. Vui lòng tải lại trang.');
-            return;
+
+    var select = $('.frame-change select');
+    select.html('');
+    $.each( text.frames, function ( idx, item ) {
+        if(idx == 0) {
+            $('.frame-image').css('background-image', 'url(' + item.src + ')');
         }
-        var select = $('.frame-change select');
-        select.html('');
-        $.each( data, function ( idx, item ) {
-            if(idx == 0) {
-                $('.frame-image').css('background-image', 'url(' + item.src + ')');
-            }
-            select.append('<option value="' + item.src + '">' + item.name + '</option>');
-        });
+        select.append('<option value="' + item.src + '">' + item.name + '</option>');
     });
+
+//     $.post( "ajax.php", function( data ) {
+//         if( ! data ) {
+//             alert('Lấy dữ liệu thất bại. Vui lòng tải lại trang.');
+//             return;
+//         }
+//         var select = $('.frame-change select');
+//         select.html('');
+//         $.each( data, function ( idx, item ) {
+//             if(idx == 0) {
+//                 $('.frame-image').css('background-image', 'url(' + item.src + ')');
+//             }
+//             select.append('<option value="' + item.src + '">' + item.name + '</option>');
+//         });
+//     });
 
     preview.cropper({
         aspectRatio: 1 / 1,
