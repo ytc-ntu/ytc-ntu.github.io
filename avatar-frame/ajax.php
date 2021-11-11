@@ -5,12 +5,12 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST') {
 
 $frames = [
 	[
-		'name' => 'YTC Chào Đón K63',
-		'src'  => 'uploads/frame-ytc.png'
+		'name' => 'Sinh Nhật YTC Lần Thứ 3',
+		'src'  => 'uploads/ytc.png'
 	],
 	[
-		'name' => 'Mùa Hè Xanh NTU',
-		'src'  => 'uploads/frame0.png'
+		'name' => 'YTC Chào Đón K63',
+		'src'  => 'uploads/frame-ytc.png'
 	],
 
 ];

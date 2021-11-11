@@ -17,8 +17,8 @@ $(document).ready(function () {
     var output_name = rand_string(5)+'YTC-avatar.png';
     
         var text = { 'frames' : [
-		{'name':'YTC Chào Đón K63', 'src' :'uploads/frame-ytc.png'}, 
-		{'name':'Mùa Hè Xanh NTU','src' :'uploads/frame0.png'}, 
+		{'name':'Sinh Nhật YTC Lần Thứ 3', 'src' :'uploads/ytc.png'}, 
+		{'name':'YTC Chào Đón K63','src' :'uploads/frame-ytc.png'}, 
 	    ]};
 
 
