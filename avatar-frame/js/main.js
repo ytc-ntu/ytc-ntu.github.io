@@ -17,7 +17,7 @@ $(document).ready(function () {
     var output_name = rand_string(5)+' YTC.png';
     
         var text = { 'frames' : [
-		{'name':'Th Thanh Niên NTU', 'src' :'uploads/dtn.png'}, 
+		{'name':'Tháng Thanh Niên NTU', 'src' :'uploads/dtn.png'}, 
 		
 	    ]};
 
