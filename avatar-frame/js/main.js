@@ -17,7 +17,7 @@ $(document).ready(function () {
     var output_name = rand_string(5)+' YTC.png';
     
         var text = { 'frames' : [
-		{'name':'Chào mừng đại Hội XXVII', 'src' :'uploads/xxvii.png'}, 
+		{'name':'Chào mừng đại Hội XXVII', 'src' :'uploads/xxvii1.png'}, 
 		
 	    ]};
 
