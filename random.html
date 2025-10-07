@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RandomLists — Name Picker (with Results Grid)</title>
+  <style>
+    :root { --bg: #0f1724; --card: #0b1220; --accent: #06b6d4; --muted: #94a3b8; }
+    * { box-sizing: border-box; font-family: Inter, ui-sans-serif, system-ui, Helvetica, Arial; }
+    html, body { height: 100%; margin: 0; background: linear-gradient(180deg,#071021 0%,#071827 60%); color: #e6eef6; }
+
+    .wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 28px; gap: 20px; }
+    .card { width: 920px; max-width: 96vw; background: linear-gradient(180deg,rgba(255,255,255,0.02),transparent); border-radius: 14px; padding: 22px; box-shadow: 0 8px 40px rgba(2,6,23,0.7); }
+    h1 { margin: 0 0 12px; font-size: 18px; color: var(--accent); }
+    .grid { display: grid; grid-template-columns: 1fr 420px; gap: 18px; }
+    textarea { width: 100%; height: 320px; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04); background: transparent; color: inherit; resize: vertical; }
+    .controls { display: flex; flex-direction: column; gap: 12px; }
+    .buttons { display: flex; gap: 10px; }
+    button { padding: 10px 16px; border-radius: 10px; border: 0; background: var(--accent); color: #012; cursor: pointer; font-weight: 600; }
+    button.secondary { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--muted); }
+    .display { height: 160px; border-radius: 12px; background: linear-gradient(180deg,rgba(255,255,255,0.02),transparent); display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 12px; position: relative; overflow: hidden; }
+    .nameBig { font-size: 36px; font-weight: 700; letter-spacing: 0.5px; min-height: 48px; z-index: 1; text-align:center }
+    .ticker { width: 100%; height: 44px; margin-top: 12px; overflow: hidden; position: relative; }
+    .tickerInner { position: absolute; left: 0; top: 0; display: flex; gap: 16px; transform: translateX(0); will-change: transform; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.03); font-weight: 600; }
+    .footer { margin-top: 10px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .small { font-size: 13px; color: var(--muted); }
+    .resultsCard { width: 920px; max-width: 96vw; background: linear-gradient(180deg,rgba(255,255,255,0.02),transparent); border-radius: 14px; padding: 22px; box-shadow: 0 8px 40px rgba(2,6,23,0.7); }
+    .resultsGrid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 12px; margin-top: 16px; }
+    .resultItem { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; text-align: center; font-weight: 600; font-size: 16px; position: relative; overflow: hidden; }
+    canvas.fireworks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    /* When in fullscreen mode, make fireworks/confetti canvases cover the entire viewport */
+    .fullscreen canvas.fireworks { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10000; }
+    .fullscreen .display { position: relative; z-index: 10001; }
+    .highlight { background: rgba(6,182,212,0.3); }
+
+    /* blinking winner name: 2 iterations only */
+    .winner-blink { animation: winnerBlink 900ms ease-in-out 0s 2; }
+    @keyframes winnerBlink {
+      0% { opacity: 1; transform: scale(1); text-shadow: 0 0 0 rgba(6,182,212,0); }
+      45% { opacity: 0.12; transform: scale(1.08); text-shadow: 0 22px 60px rgba(6,182,212,0.28); }
+      100% { opacity: 1; transform: scale(1); text-shadow: 0 0 0 rgba(6,182,212,0); }
+    }
+
+    /* Fullscreen: center name vertically */
+    .fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .fullscreen .card, .fullscreen .resultsCard { display: none; }
+    .fullscreen #fullscreenDisplay { display:flex; align-items:center; justify-content:center; flex-direction:column; width:100%; height:100%; }
+    .fullscreen .display { background: none; box-shadow: none; height: auto; display:flex; align-items:center; justify-content:center; flex-direction:column; flex:1; }
+    .fullscreen .nameBig { font-size: 72px; text-align:center; }
+
+    .fsExit { position: fixed; top: 18px; right: 18px; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10001; background: rgba(255,255,255,0.04); }
+    .fsExit svg { width: 18px; height: 18px; fill: none; stroke: #e6eef6; stroke-width: 2; }
+
+    .hidden { display: none !important; }
+    @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } .fullscreen .nameBig { font-size: 46px; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="mainCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:20px">
+      <div>
+        <h1>randomLists — Name Picker</h1>
+        <div class="small" id="headerNote">Dán danh sách tên (mỗi tên 1 dòng) rồi nhấn <strong>Start</strong>. Sau 10 giây sẽ tự dừng, chọn ra 1 người và thêm vào danh sách kết quả.</div>
+      </div>
+      <button id="fullscreenBtn" class="secondary">Fullscreen</button>
+    </div>
+
+    <div class="grid" style="margin-top:14px" id="gridArea">
+      <div>
+        <textarea id="namesInput">Nguyễn Văn A
+Trần Thị B
+Lê Văn C
+Phạm Thị D
+Hoàng Minh E
+Ngô Quang F
+Bùi Thị G
+Đỗ Văn H
+Võ Thị I
+Phan Anh K</textarea>
+
+        <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+          <button id="btnLoad" class="secondary">Load sample</button>
+          <button id="btnLoad2" class="secondary">Load sample 2</button>
+          <button id="btnLoadMany" class="secondary">Load long list</button>
+          <button id="btnClear" class="secondary">Clear input</button>
+          <button id="resetResultsBtn" class="secondary">Reset results</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="display">
+          <div class="nameBig" id="bigName">—</div>
+          <canvas id="fireworks" class="fireworks"></canvas>
+          <canvas id="confetti" class="fireworks"></canvas>
+          <div class="ticker" aria-hidden="true"><div class="tickerInner" id="tickerInner"></div></div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="buttons" style="flex:1">
+            <button id="startBtn">Start</button>
+            <button id="pickOne" class="secondary">Pick One (instant)</button>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="small">Số tên: <span id="count">0</span></div>
+          <div class="small">Đã chọn: <span id="pickedCount">0</span>/15</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="resultsCard" id="resultsCard">
+    <h1>Kết quả</h1>
+    <div class="resultsGrid" id="resultsGrid"></div>
+  </div>
+
+  <!-- Fullscreen UI (buttons removed) -->
+  <div id="fullscreenDisplay" class="onlyDisplay hidden" aria-hidden="true">
+    <div class="display">
+      <div class="nameBig" id="bigNameFs">—</div>
+      <canvas id="fireworksFs" class="fireworks"></canvas>
+      <canvas id="confettiFs" class="fireworks"></canvas>
+    </div>
+    <div id="fsExit" class="fsExit" title="Thoát Fullscreen" aria-label="Thoát">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M18 6 L6 18 M6 6 L18 18" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const namesInput=document.getElementById('namesInput');
+  const startBtn=document.getElementById('startBtn');
+  const pickOne=document.getElementById('pickOne');
+  const bigName=document.getElementById('bigName');
+  const countEl=document.getElementById('count');
+  const pickedCountEl=document.getElementById('pickedCount');
+  const tickerInner=document.getElementById('tickerInner');
+  const btnLoad=document.getElementById('btnLoad');
+  const btnLoad2=document.getElementById('btnLoad2');
+  const btnLoadMany=document.getElementById('btnLoadMany');
+  const btnClear=document.getElementById('btnClear');
+  const resultsGrid=document.getElementById('resultsGrid');
+  const fullscreenBtn=document.getElementById('fullscreenBtn');
+  const fullscreenDisplay=document.getElementById('fullscreenDisplay');
+  const bigNameFs=document.getElementById('bigNameFs');
+  const fsExit=document.getElementById('fsExit');
+  const fireworksCanvas=document.getElementById('fireworks');
+  const fireworksCanvasFs=document.getElementById('fireworksFs');
+  const confettiCanvas=document.getElementById('confetti');
+  const confettiCanvasFs=document.getElementById('confettiFs');
+  let names=[],running=false,stopping=false,timerId=null,currentInterval=60,picked=[],isFullscreen=false;
+
+  /* ---------- name parsing & UI ---------- */
+  function parseNames(){
+    // split on one or more CR/LF sequences robustly
+    names = namesInput.value.split(/\r?\n+/).map(s => s.trim()).filter(Boolean).filter(n => !picked.includes(n));
+    countEl.textContent = names.length;
+    populateTicker();
+  }
+
+  function randomPick(){ return names.length ? names[Math.floor(Math.random()*names.length)] : '—'; }
+  function showName(n){ bigName.textContent = n; if (bigNameFs) bigNameFs.textContent = n; }
+
+  function spinLoop(interval){
+    if(!running) return;
+    currentInterval = interval;
+    const n = randomPick();
+    showName(n);
+    timerId = setTimeout(() => {
+      if (stopping) {
+        const next = Math.min(interval * 1.22 + 10, 900);
+        if (next >= 700) { running = false; stopping = false; clearTimeout(timerId); finalizePick(n); return; }
+        spinLoop(next);
+      } else {
+        const jitter = (Math.random() - 0.5) * 12;
+        const next = Math.max(30, interval + jitter);
+        spinLoop(next);
+      }
+    }, interval);
+  }
+
+  function startSpin(){
+    if (running) return;
+    parseNames();
+    if (names.length === 0) { alert('Vui lòng nhập ít nhất 1 tên.'); return; }
+    if (picked.length >= 15) { alert('Đã chọn đủ 15 người.'); return; }
+    running = true; stopping = false; currentInterval = 40 + Math.random() * 30; spinLoop(currentInterval);
+    // auto-stop after 10s unless user stops earlier
+    setTimeout(() => { if (running && !stopping) stopSpin(); }, 10000);
+  }
+  function stopSpin(){
+    if(!running) return;
+    stopping = true;
+    // immediate visual feedback: focused fireworks + confetti at the winner-name position
+    try {
+      const big = isFullscreen && bigNameFs ? bigNameFs : bigName;
+      if (!big) return;
+      const rect = big.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+
+      if (isFullscreen) {
+        if (engineFs) engineFs.explodeAtClientCoords(cx, cy, 48);
+        if (confettiFs) {
+          const canvasRect = confettiCanvasFs.getBoundingClientRect();
+          confettiFs.burst(cx - canvasRect.left, cy - canvasRect.top, 40);
+        }
+      } else {
+        if (engine) engine.explodeAtClientCoords(cx, cy, 48);
+        if (confetti) {
+          const canvasRect = confettiCanvas.getBoundingClientRect();
+          confetti.burst(cx - canvasRect.left, cy - canvasRect.top, 40);
+        }
+      }
+    } catch (e) { /* ignore geometry errors */ }
+  }
+
+  /* ---------- results ---------- */
+  function finalizePick(n){ if (n === '—') return; picked.push(n); pickedCountEl.textContent = picked.length; names = names.filter(x => x !== n); addResultItem(n); showName(n);
+    // fire a quick confetti/fireworks to celebrate the moment of selection (helps if stopSpin didn't show for any reason)
+    try {
+      const big = isFullscreen && bigNameFs ? bigNameFs : bigName;
+      if (big) {
+        const rect = big.getBoundingClientRect();
+        const cx = rect.left + rect.width/2;
+        const cy = rect.top + rect.height/2;
+        if (isFullscreen) {
+          if (engineFs) engineFs.explodeAtClientCoords(cx, cy, 56);
+          if (confettiFs) {
+            const canvasRect = confettiCanvasFs.getBoundingClientRect();
+            confettiFs.burst(cx - canvasRect.left, cy - canvasRect.top, 56);
+          }
+        } else {
+          if (engine) engine.explodeAtClientCoords(cx, cy, 56);
+          if (confetti) {
+            const canvasRect = confettiCanvas.getBoundingClientRect();
+            confetti.burst(cx - canvasRect.left, cy - canvasRect.top, 56);
+          }
+        }
+      }
+    } catch (e) { /* ignore geometry errors */ }
+    triggerCelebration(n); }
+  function addResultItem(name){ const item = document.createElement('div'); item.className = 'resultItem highlight'; item.textContent = name; resultsGrid.appendChild(item); setTimeout(() => item.classList.remove('highlight'), 1500); }
+  function pickInstant(){ parseNames(); if (names.length === 0) { alert('Vui lòng nhập ít nhất 1 tên.'); return; } if (picked.length >= 15) { alert('Đã chọn đủ 15 người.'); return; } const n = randomPick(); finalizePick(n); showName(n); }
+
+  startBtn.addEventListener('click', startSpin);
+  pickOne.addEventListener('click', pickInstant);
+  const startBtnFs = document.getElementById('startBtnFs');
+  const pickOneFs = document.getElementById('pickOneFs');
+  if (startBtnFs) startBtnFs.addEventListener('click', startSpin);
+  if (pickOneFs) pickOneFs.addEventListener('click', pickInstant);
+  namesInput.addEventListener('input', parseNames);
+
+  // toggle spin with key 'R' when in fullscreen: start spin if not running, stop if running
+  window.addEventListener('keydown', (e) => {
+    if (!isFullscreen) return;
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      // toggle: start spinning if idle, otherwise request stop (which will decelerate and finalize)
+      if (!running) {
+        startSpin();
+      } else {
+        stopSpin();
+      }
+    }
+  });
+
+  // sample / test-case loaders (added as extra test cases)
+  btnLoad.addEventListener('click', () => {
+    namesInput.value = ['Nguyễn Văn A','Trần Thị B','Lê Văn C','Phạm Thị D','Hoàng Minh E','Ngô Quang F','Bùi Thị G','Đỗ Văn H','Võ Thị I','Phan Anh K'].join('\n');
+    parseNames();
+  });
+
+  btnLoad2.addEventListener('click', () => {
+    namesInput.value = ['Mai Lan','Xuân Anh','Minh Đức','Hà My','Tuấn Kiệt','Thanh Hằng','Duy Anh','Ngọc Linh','Quỳnh Anh','Tùng'].join('\n');
+    parseNames();
+  });
+
+  btnLoadMany.addEventListener('click', () => {
+    // generate a longer list to act as a stress test / second test case
+    const many = [];
+    for (let i = 1; i <= 60; i++) many.push('Người ' + i);
+    namesInput.value = many.join('\n');
+    parseNames();
+  });
+
+  btnClear.addEventListener('click', () => { namesInput.value = ''; parseNames(); showName('—'); });
+  document.getElementById('resetResultsBtn').addEventListener('click', () => { resultsGrid.innerHTML = ''; picked = []; pickedCountEl.textContent = 0; });
+
+  fullscreenBtn.addEventListener('click', () => { isFullscreen = !isFullscreen; if (isFullscreen) {
+      document.body.classList.add('fullscreen');
+      fullscreenDisplay.classList.remove('hidden');
+      // sync displayed name
+      if (bigNameFs) bigNameFs.textContent = bigName.textContent || '—';
+      // make sure fullscreen canvases are fixed and resized to viewport
+      if (fireworksCanvasFs) {
+        fireworksCanvasFs.style.position = 'fixed'; fireworksCanvasFs.style.top = '0'; fireworksCanvasFs.style.left = '0'; fireworksCanvasFs.style.width = '100vw'; fireworksCanvasFs.style.height = '100vh'; fireworksCanvasFs.style.zIndex = '10000';
+      }
+      if (confettiCanvasFs) {
+        confettiCanvasFs.style.position = 'fixed'; confettiCanvasFs.style.top = '0'; confettiCanvasFs.style.left = '0'; confettiCanvasFs.style.width = '100vw'; confettiCanvasFs.style.height = '100vh'; confettiCanvasFs.style.zIndex = '10001';
+      }
+      // resize engines so canvases use correct pixel sizes
+      setTimeout(() => { if (engineFs) engineFs.resize(); if (confettiFs) confettiFs.resize(); }, 80);
+    } else {
+      document.body.classList.remove('fullscreen');
+      fullscreenDisplay.classList.add('hidden');
+      // restore canvas positioning back to absolute (inside display area)
+      if (fireworksCanvasFs) {
+        fireworksCanvasFs.style.position = ''; fireworksCanvasFs.style.top = ''; fireworksCanvasFs.style.left = ''; fireworksCanvasFs.style.width = ''; fireworksCanvasFs.style.height = ''; fireworksCanvasFs.style.zIndex = '';
+      }
+      if (confettiCanvasFs) {
+        confettiCanvasFs.style.position = ''; confettiCanvasFs.style.top = ''; confettiCanvasFs.style.left = ''; confettiCanvasFs.style.width = ''; confettiCanvasFs.style.height = ''; confettiCanvasFs.style.zIndex = '';
+      }
+      setTimeout(() => { if (engineFs) engineFs.resize(); if (confettiFs) confettiFs.resize(); }, 80);
+    } });
+  fsExit.addEventListener('click', () => { isFullscreen = false; document.body.classList.remove('fullscreen'); fullscreenDisplay.classList.add('hidden');
+    if (fireworksCanvasFs) {
+      fireworksCanvasFs.style.position = ''; fireworksCanvasFs.style.top = ''; fireworksCanvasFs.style.left = ''; fireworksCanvasFs.style.width = ''; fireworksCanvasFs.style.height = ''; fireworksCanvasFs.style.zIndex = '';
+    }
+    if (confettiCanvasFs) {
+      confettiCanvasFs.style.position = ''; confettiCanvasFs.style.top = ''; confettiCanvasFs.style.left = ''; confettiCanvasFs.style.width = ''; confettiCanvasFs.style.height = ''; confettiCanvasFs.style.zIndex = '';
+    }
+    setTimeout(() => { if (engineFs) engineFs.resize(); if (confettiFs) confettiFs.resize(); }, 80);
+  });
+
+  parseNames();
+
+  /* ---------- ticker population ---------- */
+  function populateTicker(){
+    tickerInner.innerHTML = '';
+    const sample = names.length ? names.slice(0,30) : ['—'];
+    sample.forEach(n => { const c = document.createElement('div'); c.className = 'chip'; c.textContent = n; tickerInner.appendChild(c); });
+  }
+
+  /* ---------- fireworks / celebration + confetti system ---------- */
+  function fitCanvasToContainer(canvas){
+    if(!canvas) return null;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+
+  function createFireworksEngine(canvas){
+    if(!canvas) return null;
+    const ctx = fitCanvasToContainer(canvas);
+    if(!ctx) return null;
+    let rafId = null; let particles = [];
+
+    function random(min,max){ return Math.random()*(max-min)+min; }
+    function hsvToRgb(h,s,v){ let f = (n,k = (n + h/60) % 6) => v - v*s*Math.max(Math.min(k,4-k,1),0); return `rgb(${Math.round(f(5)*255)},${Math.round(f(3)*255)},${Math.round(f(1)*255)})`; }
+
+    function explode(x,y,color,amount=40){
+      for(let i=0;i<amount;i++){ const speed = random(1,6); const angle = Math.random()*Math.PI*2; particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: random(800,1600), age: 0, color }); }
+    }
+
+    function step(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(let i = particles.length - 1; i >= 0; i--){ const p = particles[i]; p.age += 16; p.vy += 0.06; p.x += p.vx; p.y += p.vy; const t = 1 - p.age / p.life; if (t <= 0) { particles.splice(i,1); continue; } ctx.globalAlpha = Math.max(0, t); ctx.beginPath(); ctx.fillStyle = p.color; ctx.arc(p.x, p.y, Math.max(1, 2.5 * t), 0, Math.PI*2); ctx.fill(); }
+      if (particles.length > 0) rafId = requestAnimationFrame(step); else { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+    }
+
+    function launchAtRandom(count = 3){
+      const rect = canvas.getBoundingClientRect();
+      for(let i=0;i<count;i++){ const x = random(rect.width*0.15, rect.width*0.85); const y = random(rect.height*0.15, rect.height*0.6); const hue = Math.floor(random(0,360)); const color = hsvToRgb(hue, 0.8, 1); explode(x, y, color, Math.floor(random(28,64))); }
+      if (!rafId) rafId = requestAnimationFrame(step);
+    }
+
+    function explodeAtClientCoords(clientX, clientY, amount=48){
+      // convert client coords to canvas-local coordinates (using canvas bounding rect)
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const hueBase = Math.floor(random(0,360));
+      for(let i=0;i<3;i++){ const hue = (hueBase + i*40) % 360; const color = hsvToRgb(hue, 0.85, 1); explode(x, y - i*6, color, Math.floor(amount / (i+1))); }
+      if (!rafId) rafId = requestAnimationFrame(step);
+    }
+
+    function clear(){ particles = []; if (rafId) cancelAnimationFrame(rafId); rafId = null; ctx.clearRect(0,0,canvas.width,canvas.height); }
+    function resize(){ fitCanvasToContainer(canvas); }
+
+    return { launchAtRandom, explodeAtClientCoords, clear, resize };
+  }
+
+  function createConfettiEngine(canvas){
+    if(!canvas) return null;
+    const ctx = fitCanvasToContainer(canvas);
+    if(!ctx) return null;
+    let rafId = null; let pieces = [];
+    const COLORS = ['#ff4d4f','#ffb86b','#ffd66b','#6ee7b7','#6fb3ff','#cf6cff'];
+
+    function random(min,max){ return Math.random()*(max-min)+min; }
+
+    function makePiece(x,y){
+      const w = random(6,12); const h = random(8,16);
+      return {
+        x, y,
+        vx: random(-4,4),
+        vy: random(-6,-2),
+        w, h,
+        rot: random(0,Math.PI*2),
+        vrot: random(-0.2,0.2),
+        color: COLORS[Math.floor(Math.random()*COLORS.length)],
+        life: random(1200,2200), age: 0
+      };
+    }
+
+    function burst(x,y,count=32){ for(let i=0;i<count;i++) pieces.push(makePiece(x + random(-8,8), y + random(-8,8))); if (!rafId) rafId = requestAnimationFrame(step); }
+
+    function step(){
+      const now = performance.now();
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(let i = pieces.length - 1; i >= 0; i--){ const p = pieces[i]; p.age += 16; p.vy += 0.06; p.vx *= 0.998; p.x += p.vx; p.y += p.vy; p.rot += p.vrot; const t = 1 - p.age / p.life; if (t <= 0) { pieces.splice(i,1); continue; }
+        ctx.save(); ctx.globalAlpha = Math.max(0, t); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore(); }
+      if (pieces.length > 0) rafId = requestAnimationFrame(step); else { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+    }
+
+    function clear(){ pieces = []; if (rafId) cancelAnimationFrame(rafId); rafId = null; ctx.clearRect(0,0,canvas.width,canvas.height); }
+    function resize(){ fitCanvasToContainer(canvas); }
+
+    return { burst, clear, resize };
+  }
+
+  const engine = createFireworksEngine(fireworksCanvas);
+  const engineFs = createFireworksEngine(fireworksCanvasFs);
+  const confetti = createConfettiEngine(confettiCanvas);
+  const confettiFs = createConfettiEngine(confettiCanvasFs);
+
+  // ensure canvases fit on resize
+  window.addEventListener('resize', () => { if (engine) engine.resize(); if (engineFs) engineFs.resize(); if (confetti) confetti.resize(); if (confettiFs) confettiFs.resize(); });
+
+  function triggerCelebration(winnerName){
+    const DURATION = 3000; const interval = 280; let elapsed = 0;
+    const launchInterval = setInterval(() => {
+      // fireworks bursts
+      if (engine) engine.launchAtRandom(3 + Math.floor(Math.random()*3));
+      if (isFullscreen && engineFs) engineFs.launchAtRandom(3 + Math.floor(Math.random()*3));
+      else if (engineFs) engineFs.launchAtRandom(2);
+
+      // confetti bursts (paper confetti) aimed at winner position
+      try {
+        const big = isFullscreen && bigNameFs ? bigNameFs : bigName;
+        if (big) {
+          const rect = big.getBoundingClientRect();
+          const cx = rect.left + rect.width/2;
+          const cy = rect.top + rect.height/2;
+          if (confetti) confetti.burst(cx - (confettiCanvas.getBoundingClientRect().left || 0), cy - (confettiCanvas.getBoundingClientRect().top || 0), 28 + Math.floor(Math.random()*16));
+          if (isFullscreen && confettiFs) confettiFs.burst(cx - (confettiCanvasFs.getBoundingClientRect().left || 0), cy - (confettiCanvasFs.getBoundingClientRect().top || 0), 28 + Math.floor(Math.random()*16));
+        }
+      } catch(e){ /* ignore geometry errors */ }
+
+      elapsed += interval; if (elapsed >= DURATION) { clearInterval(launchInterval); setTimeout(() => { if (engine) engine.clear(); if (engineFs) engineFs.clear(); if (confetti) confetti.clear(); if (confettiFs) confettiFs.clear(); }, 700); }
+    }, interval);
+
+    // pulse + blink (2 iterations only) on winner
+    const big = isFullscreen && bigNameFs ? bigNameFs : bigName;
+    if (big){
+      big.classList.remove('winner-blink'); // reset
+      big.style.transition = 'transform 160ms ease, text-shadow 160ms ease';
+      big.style.transform = 'scale(1.14)';
+      big.style.textShadow = '0 22px 68px rgba(6,182,212,0.32)';
+      setTimeout(() => { big.style.transform=''; big.style.textShadow=''; big.classList.add('winner-blink'); }, 180);
+      // remove blink class shortly after 2 iterations complete (900ms * 2 + small buffer)
+      setTimeout(() => { big.classList.remove('winner-blink'); }, 180 + 900*2 + 80);
+    }
+
+    // small shimmer on the last result item
+    const last = resultsGrid.lastElementChild; if (last){ last.animate([{ transform: 'scale(1)', boxShadow: '0 6px 18px rgba(6,182,212,0.14)' },{ transform: 'scale(1.06)', boxShadow: '0 28px 68px rgba(6,182,212,0.28)' },{ transform: 'scale(1)', boxShadow: '0 6px 18px rgba(6,182,212,0.14)' }], { duration: 1100, iterations: 1, easing: 'ease-out' }); }
+  }
+
+})();
+</script>
+</body>
+</html>
