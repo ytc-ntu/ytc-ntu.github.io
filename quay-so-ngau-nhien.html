@@ -135,22 +135,6 @@
             margin-bottom: 1rem;
         }
 
-        .control-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        #duration-input {
-            width: 60px;
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            text-align: center;
-        }
-
-        .checkbox-item { cursor: pointer; }
-
         #random-name-display {
             width: 100%;
             flex-grow: 1; /* Để linh hoạt trong flexbox */
@@ -190,47 +174,47 @@
             border-bottom: 1px dashed #eee;
         }
 
-        /* --- Chế độ Toàn màn hình --- */
-        body.fullscreen-mode {
-            padding: 0;
+        .fullscreen-instructions {
+            display: none; /* Ẩn mặc định */
         }
+
+        /* --- Chế độ Toàn màn hình --- */
+        body.fullscreen-mode { padding: 0; }
         body.fullscreen-mode .aspect-ratio-box {
-            max-width: none;
-            width: 100vw;
-            height: 100vh;
-            border-radius: 0;
+            max-width: none; width: 100vw; height: 100vh; border-radius: 0;
         }
 
         body.fullscreen-mode #input-section,
         body.fullscreen-mode #display-section .controls,
-        body.fullscreen-mode .results-container h3 {
+        body.fullscreen-mode .results-container h3,
+        body.fullscreen-mode .main-controls { /* Ẩn các nút điều khiển */
             display: none;
         }
 
         body.fullscreen-mode #display-section {
-            flex-basis: 100%;
-            padding: 1rem;
-            height: 100%;
-        }
-        
-        body.fullscreen-mode .main-container {
-             height: 100vh;
-        }
-
-        body.fullscreen-mode #display-section {
-            display: flex;
-            flex-direction: column;
+            flex-basis: 100%; padding: 1rem; height: 100%;
+            display: flex; flex-direction: column;
         }
 
         body.fullscreen-mode #random-name-display {
-            flex: 2; /* Chiếm 2/3 không gian */
-            font-size: 5vw; /* Kích thước chữ linh hoạt */
-            margin-bottom: 1rem;
+            flex: 2; font-size: 5vw; margin-bottom: 1rem;
         }
         
         body.fullscreen-mode .results-container {
-            flex: 1; /* Chiếm 1/3 không gian */
-            margin-top: 0;
+            flex: 1; margin-top: 0;
+        }
+
+        body.fullscreen-mode .fullscreen-instructions {
+            display: block; /* Hiện hướng dẫn */
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #aaa;
+            font-size: 0.9rem;
+            background-color: rgba(0, 0, 0, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
         }
 
         /* --- Tương thích với điện thoại (Responsive) --- */
@@ -287,6 +271,8 @@
                     <h3>Kết quả</h3>
                     <ol id="results-list"></ol>
                 </div>
+
+                <div class="fullscreen-instructions">Nhấn [R] để quay, [ESC] để thoát</div>
             </div>
         </div>
     </div>
@@ -314,7 +300,6 @@
 
             // --- CÁC HÀM XỬ LÝ SỰ KIỆN ---
 
-            // Nạp danh sách mẫu
             loadSampleBtn.addEventListener('click', () => {
                 const sampleNames = [
                     'Nguyễn Ngọc Anh - 66123456', 'Trần Văn Bình - 66234567', 'Lê Thị Cúc - 66345678',
@@ -325,20 +310,13 @@
                 nameListInput.value = sampleNames.join('\n');
             });
 
-            // Xoá trắng ô nhập liệu
-            clearBtn.addEventListener('click', () => {
-                nameListInput.value = '';
-            });
+            clearBtn.addEventListener('click', () => nameListInput.value = '');
 
-            // Bắt đầu quay số
             runBtn.addEventListener('click', () => {
                 const namesFromInput = nameListInput.value.split('\n').map(name => name.trim()).filter(name => name !== '');
                 
                 if (currentList.length === 0) {
-                    if (namesFromInput.length === 0) {
-                        alert('Vui lòng nhập danh sách hoặc nạp mẫu!');
-                        return;
-                    }
+                    if (namesFromInput.length === 0) { return alert('Vui lòng nhập danh sách hoặc nạp mẫu!'); }
                     originalList = [...namesFromInput];
                     currentList = [...namesFromInput];
                 } else if(currentList.length > 0 && namesFromInput.join() !== originalList.join()) {
@@ -349,28 +327,39 @@
                     }
                 }
 
-                if (currentList.length === 0) {
-                    alert('Đã quay hết tất cả mọi người trong danh sách!');
-                    return;
-                }
+                if (currentList.length === 0) { return alert('Đã quay hết tất cả mọi người trong danh sách!'); }
 
                 startRandomization();
             });
 
-            // Reset lại từ đầu
             resetBtn.addEventListener('click', () => {
                 if(confirm('Bạn có chắc muốn xoá kết quả và bắt đầu lại với danh sách ban đầu?')) {
                     resetLogic();
                 }
             });
             
-            // Chuyển đổi chế độ toàn màn hình
-            fullscreenBtn.addEventListener('click', () => {
-                document.body.classList.toggle('fullscreen-mode');
-                fullscreenBtn.textContent = document.body.classList.contains('fullscreen-mode') ? 'Thoát Toàn màn hình' : 'Toàn màn hình';
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+            // --- PHÍM TẮT ---
+            document.addEventListener('keydown', (event) => {
+                if (document.body.classList.contains('fullscreen-mode')) {
+                    if (event.key.toLowerCase() === 'r' && !runBtn.disabled) {
+                        runBtn.click();
+                    }
+                    if (event.key === 'Escape') {
+                        toggleFullscreen();
+                    }
+                }
             });
 
             // --- CÁC HÀM LOGIC ---
+
+            function toggleFullscreen() {
+                document.body.classList.toggle('fullscreen-mode');
+                fullscreenBtn.textContent = document.body.classList.contains('fullscreen-mode') 
+                    ? 'Thoát Toàn màn hình' 
+                    : 'Toàn màn hình';
+            }
 
             function startRandomization() {
                 runBtn.disabled = true;
@@ -413,7 +402,6 @@
                 resultsList.innerHTML = '';
                 randomNameDisplay.textContent = '?';
                 runBtn.disabled = false;
-                // Không cần alert nữa để trải nghiệm mượt hơn
             }
         });
     </script>
